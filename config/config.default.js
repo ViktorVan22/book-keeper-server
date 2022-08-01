@@ -2,6 +2,8 @@
 
 "use strict";
 
+const { pwd } = require("../dbpwd");
+
 /**
  * @param {Egg.EggAppInfo} appInfo app info
  */
@@ -17,8 +19,8 @@ module.exports = appInfo => {
       host: "localhost",
       port: "3306",
       user: "root",
-      password: "950827",
-      database: "juejue_cost",
+      password: pwd,
+      database: "jue-cost",
     },
     app: true,
     agent: false,
