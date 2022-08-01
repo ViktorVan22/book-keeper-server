@@ -11,8 +11,8 @@ class BillController extends Controller {
       amount,
       type_id,
       type_name,
-      date,
       pay_type,
+      date,
       remark = "",
     } = ctx.request.body;
     if (!amount || !type_id || !type_name || !pay_type) {
@@ -33,7 +33,7 @@ class BillController extends Controller {
         amount,
         type_id,
         type_name,
-        date,
+        date: date ? date : Date.now(),
         pay_type,
         remark,
         user_id,
@@ -54,14 +54,14 @@ class BillController extends Controller {
 
   async list() {
     const { ctx, app } = this;
-    // 获取，日期 date，分页数据，类型 type_id，这些都是我们在前端传给后端的数据
+    // 获取日期 date，分页数据，类型 type_id，这些都是我们在前端传给后端的数据
     const { date, page = 1, page_size = 5, type_id = "all" } = ctx.query;
 
     try {
       let user_id;
       // 通过 token 解析，拿到 user_id
       const token = ctx.request.header.authorization;
-      const decode = await app.jwt.verify(token, app.config.jwt.secret);
+      const decode = app.jwt.verify(token, app.config.jwt.secret);
       if (!decode) return;
       user_id = decode.id;
       // 拿到当前用户的账单列表
@@ -240,12 +240,15 @@ class BillController extends Controller {
         msg: "请求成功",
         data: null,
       };
+      return result;
     } catch (error) {
+      console.log(error);
       ctx.body = {
         code: 500,
         msg: "系统错误",
         data: null,
       };
+      return null;
     }
   }
 
@@ -272,6 +275,89 @@ class BillController extends Controller {
         code: 200,
         msg: "请求成功",
         data: null,
+      };
+    } catch (error) {
+      ctx.body = {
+        code: 500,
+        msg: "系统错误",
+        data: null,
+      };
+    }
+  }
+
+  async data() {
+    const { ctx, app } = this;
+    const { date = "" } = ctx.query;
+
+    const token = ctx.request.header.authorization;
+    const decode = app.jwt.verify(token, app.config.jwt.secret);
+    if (!decode) return;
+
+    if (!date) {
+      ctx.body = {
+        code: 400,
+        msg: "参数错误",
+        data: null,
+      };
+      return;
+    }
+    try {
+      const result = await ctx.service.bill.list(decode.id);
+      const start = moment(date).startOf("month").unix() * 1000;
+      const end = moment(date).endOf("month").unix() * 1000;
+      const _data = result.filter(item => {
+        if (Number(item.date) > start && Number(item.date) < end) {
+          return item;
+        }
+      });
+
+      // 总支出
+      const total_expense = _data.reduce((arr, cur) => {
+        if (cur.pay_type == 1) {
+          arr += Number(cur.amount);
+        }
+        return arr;
+      }, 0);
+
+      // 总收入
+      const total_income = _data.reduce((arr, cur) => {
+        if (cur.pay_type == 2) {
+          arr += Number(cur.amount);
+        }
+        return arr;
+      }, 0);
+
+      // 获取收支构成
+      let total_data = _data.reduce((arr, cur) => {
+        const index = arr.findIndex(item => item.type_id == cur.type_id);
+        if (index == -1) {
+          arr.push({
+            type_id: cur.type_id,
+            type_name: cur.type_name,
+            pay_type: cur.pay_type,
+            number: Number(cur.amount),
+          });
+        }
+        if (index > -1) {
+          arr[index].number += Number(cur.amount);
+        }
+        return arr;
+      }, []);
+
+      total_data = total_data.map(item => {
+        item.number = Number(Number(item.number).toFixed(2));
+        return item;
+      });
+
+      ctx.body = {
+        code: 200,
+        msg: "请求成功",
+        data: {
+          total_expense: Number(total_expense).toFixed(2),
+          total_income: Number(total_income).toFixed(2),
+          total_data: total_data || [],
+          // bar_data: bar_data || []
+        },
       };
     } catch (error) {
       ctx.body = {

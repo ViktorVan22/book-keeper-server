@@ -2,6 +2,9 @@
 
 const Controller = require("egg").Controller;
 
+const defaultAvatar =
+  "http://s.yezgea02.com/1615973940679/WeChat77d6d2ac093e247c361f0b8a7aeb6c2a.png";
+
 class UserController extends Controller {
   async register() {
     const { ctx } = this;
@@ -26,13 +29,11 @@ class UserController extends Controller {
       return;
     }
 
-    const defaultAvatar =
-      "http://s.yezgea02.com/1615973940679/WeChat77d6d2ac093e247c361f0b8a7aeb6c2a.png";
     const result = await ctx.service.user.register({
       username,
       password,
       ctime: Date.now().toString(),
-      signature: "阿米浴说的道理",
+      signature: "",
       avatar: defaultAvatar,
     });
     if (result) {
@@ -119,6 +120,7 @@ class UserController extends Controller {
         signature: userInfo.signature || "",
         avatar: userInfo.avatar || defaultAvatar,
         createdAt: userInfo.ctime,
+        password: userInfo.password,
       },
     };
   }
@@ -149,6 +151,68 @@ class UserController extends Controller {
         avatar,
       },
     };
+    console.log(result);
+    return result;
+  }
+
+  async modifyPass() {
+    const { ctx, app } = this;
+    const { old_pass = "", new_pass = "", new_pass2 = "" } = ctx.request.body;
+
+    try {
+      const token = ctx.request.header.authorization;
+      const decode = app.jwt.verify(token, app.config.jwt.secret);
+
+      if (!decode) return;
+
+      if (decode.username === "admin") {
+        ctx.body = {
+          code: 400,
+          msg: "管理员账户，不允许修改密码！",
+          data: null,
+        };
+        return;
+      }
+      const userInfo = await ctx.service.user.getUserByName(decode.username);
+
+      if (old_pass != userInfo.password) {
+        ctx.body = {
+          code: 400,
+          msg: "原密码错误",
+          data: null,
+        };
+        return;
+      }
+
+      if (new_pass != new_pass2) {
+        ctx.body = {
+          code: 400,
+          msg: "新密码不一致",
+          data: null,
+        };
+        return;
+      }
+
+      const result = await ctx.service.user.modifyPass({
+        ...userInfo,
+        password: new_pass,
+      });
+
+      ctx.body = {
+        code: 200,
+        msg: "请求成功",
+        data: null,
+      };
+      return result;
+    } catch (error) {
+      console.log(error);
+      ctx.body = {
+        code: 500,
+        msg: "系统错误",
+        data: null,
+      };
+      return null;
+    }
   }
 }
 

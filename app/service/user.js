@@ -37,10 +37,30 @@ class UserService extends Service {
           id: params.id,
         }
       );
+      console.log(result);
       return result;
     } catch (error) {
       console.log(error);
       return;
+    }
+  }
+
+  async modifyPass(params) {
+    const { ctx, app } = this;
+    try {
+      let result = await app.mysql.update(
+        "user",
+        {
+          ...params,
+        },
+        {
+          id: params.id,
+        }
+      );
+      return result;
+    } catch (error) {
+      console.log(error);
+      return null;
     }
   }
 }
