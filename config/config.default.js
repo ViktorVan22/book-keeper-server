@@ -2,8 +2,6 @@
 
 "use strict";
 
-const { pwd } = require("../dbpwd");
-
 /**
  * @param {Egg.EggAppInfo} appInfo app info
  */
