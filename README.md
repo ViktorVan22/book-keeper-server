@@ -1,9 +1,8 @@
-# book-keeping-fullstack
+# book-keeping-server
 
-前后端分离的记账项目，适合移动端使用。
+前后端分离的记账项目后端代码
 
-后端：`eggjs`
-前端： `React`
+后端：`Eggjs`
 数据库： `Mysql`
 
 ## Create Project
